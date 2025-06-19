@@ -69,6 +69,9 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install MCP server
+RUN npm install -g task-master-ai
+
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
 USER root

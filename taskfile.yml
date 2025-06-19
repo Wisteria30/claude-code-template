@@ -21,3 +21,8 @@ tasks:
     desc: "Dockerコンテナ内でコマンドを実行"
     cmds:
       - docker compose exec claude zsh
+
+  ps:
+    desc: "Dockerコンテナの状態を表示"
+    cmds:
+      - docker compose ps

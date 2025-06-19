@@ -6,3 +6,16 @@ services:
       - ./workspace:/workspace
     working_dir: /workspace
     tty: true
+    depends_on:
+      - taskmaster
+
+  taskmaster:
+    image: node:20
+    volumes:
+      - ./workspace:/workspace
+    working_dir: /workspace
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    command: npx -y task-master-ai --transport sse --port 4891
+    ports:
+      - "4891:4891"
