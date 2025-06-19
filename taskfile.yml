@@ -15,6 +15,7 @@ tasks:
     desc: "Dockerコンテナを再起動"
     cmds:
       - docker compose down
+      - docker compose build
       - docker compose up -d
 
   exec:

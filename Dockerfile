@@ -1,5 +1,15 @@
 FROM node:20
 
+# ---------- go install ----------
+ARG GO_VERSION=1.24.4
+RUN set -eux; \
+    arch="$(dpkg --print-architecture)"; \
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz" -o /tmp/go.tgz; \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz; \
+    rm /tmp/go.tgz
+ENV PATH="/usr/local/go/bin:${PATH}"
+# ---------- go end ----------
+
 ARG TZ
 ENV TZ="$TZ"
 
@@ -19,7 +29,8 @@ RUN apt update && apt install -y less \
   iproute2 \
   dnsutils \
   aggregate \
-  jq
+  jq \
+  tmux
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -52,7 +63,8 @@ USER node
 
 # Install global packages
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
+ENV GOPATH=/home/node/go
+ENV PATH=$PATH:/usr/local/share/npm-global/bin:$GOPATH/bin
 
 # Set the default shell to zsh rather than sh
 ENV SHELL=/bin/zsh
@@ -71,6 +83,10 @@ RUN npm install -g @anthropic-ai/claude-code
 
 # Install MCP server
 RUN npm install -g task-master-ai
+
+# Install tools
+RUN go install github.com/d-kuro/gwq/cmd/gwq@latest
+RUN go install github.com/go-task/task/v3/cmd/task@latest
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
