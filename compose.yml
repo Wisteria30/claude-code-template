@@ -1,0 +1,8 @@
+services:
+  claude:
+    build:
+      context: .
+    volumes:
+      - ./workspace:/workspace
+    working_dir: /workspace
+    tty: true
