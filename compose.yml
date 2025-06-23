@@ -2,10 +2,24 @@ services:
   claude:
     build:
       context: .
+      dockerfile: Dockerfile
+      args:
+        TZ: ${TZ:-America/Los_Angeles}
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    user: node
     volumes:
+      - claude-code-bashhistory:/commandhistory
+      - claude-code-config:/home/node/.claude
       - ./workspace:/workspace
+      - ./workspace/worktrees:/home/node/worktrees
     working_dir: /workspace
-    tty: true
+    environment:
+      NODE_OPTIONS: --max-old-space-size=4096
+      CLAUDE_CONFIG_DIR: /home/node/.claude
+      POWERLEVEL9K_DISABLE_GITSTATUS: "true"
+    command: sleep infinity
     depends_on:
       - taskmaster
 
@@ -19,3 +33,7 @@ services:
     command: npx -y task-master-ai --transport sse --port 4891
     ports:
       - "4891:4891"
+
+volumes:
+  claude-code-bashhistory:
+  claude-code-config:

@@ -9,10 +9,8 @@
 ```bash
 task up
 task exec
-# login
-claude
-# after login
-claude --dangerously-skip-permissions
+# exec in container shell
+task run
 
 # add mcp
 claude mcp add  --transport sse taskmaster-http http://taskmaster:4891/sse
