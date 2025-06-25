@@ -85,11 +85,21 @@ RUN npm install -g @anthropic-ai/claude-code
 RUN npm install -g task-master-ai
 
 # Install tools
-RUN go install github.com/d-kuro/gwq/cmd/gwq@latest
-RUN go install github.com/go-task/task/v3/cmd/task@latest
+RUN go install github.com/d-kuro/gwq/cmd/gwq@latest && \
+  go install github.com/go-task/task/v3/cmd/task@latest && \
+  go install github.com/peco/peco/cmd/peco@latest && \
+  go install github.com/x-motemen/ghq@latest
+
+# Copy and setup .zshrc
+COPY setup/.zshrc.local /home/node/.zshrc.local
+RUN cat /home/node/.zshrc.local >> /home/node/.zshrc
+
+# Copy and setup .gitconfig
+COPY setup/.gitconfig.local /home/node/.gitconfig.local
+RUN cat /home/node/.gitconfig.local >> /home/node/.gitconfig
 
 # Copy and set up firewall script
-COPY init-firewall.sh /usr/local/bin/
+COPY setup/init-firewall.sh /usr/local/bin/
 USER root
 RUN chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \

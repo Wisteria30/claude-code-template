@@ -1,0 +1,41 @@
+[color]
+        ui = true
+        diff = auto
+        status = auto
+        branch = auto
+        interactive = auto
+[core]
+        editor = vim
+        precomposeunicode = true
+[push]
+        default = simple
+[alias]
+        add = add -u
+        co = commit --allow-empty -m
+        ch = checkout
+        br = branch
+        bra = branch -avv
+        sh = stash
+        st = status -s
+        save = stash save -u
+        pop = stash pop
+        see = !gh repo view --web
+        delete-merged-branch = "!f () { git checkout $1; git branch --merged|egrep -v '\\*|develop|master|main'|xargs git branch -d; };f"
+        gr = grep -C 3 -i -n --color=auto
+        openpr = "!f() { hub browse -- `git log --merges --oneline --reverse --ancestry-path $1...master | grep 'Merge pull request #' | head -n 1 | cut -f5 -d' ' | sed -e 's%#%pull/%'`; }; f"
+
+[tig "bind"]
+        diff = F ?!git commit --fixup %(commit)
+        diff = S ?!git commit --squash %(commit)
+        main = F ?!git commit --fixup %(commit)
+        main = S ?!git commit --squash %(commit)
+
+[url "ssh://git@github.com/"]
+        insteadOf = https://github.com/
+
+[ghq]
+        root = /workspace
+[init]
+        templatedir = ~/.git_template
+[pager]
+        branch = false

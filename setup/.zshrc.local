@@ -1,0 +1,28 @@
+# Ctrl-g → gwq list → peco → cd
+function peco-gwq () {
+  # -g を付けてベースディレクトリ全体を対象にする
+  # ヘッダ行を除いて PATH 列だけ抽出
+  local selected_dir=$(gwq list -g | awk 'NR>1 {print $NF}' | peco --query "$LBUFFER")
+  if [[ -n "$selected_dir" ]]; then
+    BUFFER="cd ${selected_dir}"
+    zle accept-line              # Enter を擬似入力して即実行
+  fi
+  zle clear-screen               # 画面クリア（好みで削除可）
+}
+zle -N peco-gwq
+bindkey '^g' peco-gwq             # 好きなキーに変更可
+
+# pecoのキーバインド
+function peco-src () {
+  local selected_dir=$(ghq list -p | peco --query "$LBUFFER")
+  if [ -n "$selected_dir" ]; then
+    BUFFER="cd ${selected_dir}"
+    zle accept-line
+  fi
+  zle clear-screen
+}
+zle -N peco-src
+bindkey '^]' peco-src
+
+# alias claude
+function claude () { claude --dangerously-skip-permissions "$1"; }
