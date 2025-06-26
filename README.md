@@ -12,8 +12,8 @@ task exec
 # exec in container shell
 task run
 
-# add mcp
-claude mcp add  --transport sse taskmaster-http http://taskmaster:4891/sse
+# MCPs are automatically set up during container creation
+# To manually add additional MCPs, edit setup/init-claude-mcp.sh
 ```
 
 ## Developments

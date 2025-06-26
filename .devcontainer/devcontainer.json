@@ -30,5 +30,5 @@
   },
   "remoteUser": "node",
   "workspaceFolder": "/workspace",
-  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh"
+  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh && /usr/local/bin/init-claude-mcp.sh"
 }

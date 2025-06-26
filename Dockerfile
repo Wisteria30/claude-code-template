@@ -30,7 +30,8 @@ RUN apt update && apt install -y less \
   dnsutils \
   aggregate \
   jq \
-  tmux
+  tmux \
+  vim
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -100,8 +101,9 @@ RUN cat /home/node/.gitconfig.local >> /home/node/.gitconfig
 
 # Copy and set up firewall script
 COPY setup/init-firewall.sh /usr/local/bin/
+COPY setup/init-claude-mcp.sh /usr/local/bin/
 USER root
-RUN chmod +x /usr/local/bin/init-firewall.sh && \
+RUN chmod +x /usr/local/bin/init-firewall.sh /usr/local/bin/init-claude-mcp.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
 USER node

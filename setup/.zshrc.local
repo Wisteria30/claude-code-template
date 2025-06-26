@@ -25,4 +25,7 @@ zle -N peco-src
 bindkey '^]' peco-src
 
 # alias claude
-function claude () { claude --dangerously-skip-permissions "$1"; }
+_claude_bin="$(command -v claude)"
+function claude() {
+  "$_claude_bin" --dangerously-skip-permissions "$@"
+}
