@@ -31,7 +31,17 @@ RUN apt update && apt install -y less \
   aggregate \
   jq \
   tmux \
-  vim
+  vim \
+  libnspr4 \
+  libnss3 \
+  libatk1.0-0 \
+  libatk-bridge2.0-0 \
+  libgbm1 \
+  libxkbcommon0 \
+  libxss1 \
+  libgtk-3-0 \
+  libasound2 \
+  libxshmfence1
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
