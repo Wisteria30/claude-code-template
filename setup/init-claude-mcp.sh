@@ -12,8 +12,8 @@ echo "Adding Typescript MCP..."
 claude mcp add -s user typescript npx -- -y @mizchi/lsmcp --language=typescript
 
 # Task Master MCP (既にREADMEに記載されているもの)
-echo "Adding Task Master MCP..."
-claude mcp add -s user --transport sse taskmaster-http http://taskmaster:4891/sse
+# echo "Adding Task Master MCP..."
+# claude mcp add -s user --transport sse taskmaster-http http://taskmaster:4891/sse
 
 # 他のMCPサーバーを追加したい場合はここに記載
 # 例:
@@ -26,4 +26,5 @@ claude mcp add -s user --transport sse taskmaster-http http://taskmaster:4891/ss
 # echo "Adding Slack MCP..."
 # claude mcp add slack npx @anthropic/mcp-slack@latest
 
-echo "MCP setup complete!" 
+echo "MCP setup complete!"
+exec /bin/zsh

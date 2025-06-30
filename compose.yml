@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        TZ: ${TZ:-America/Los_Angeles}
+        TZ: ${TZ:-Asia/Tokyo}
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -13,13 +13,13 @@ services:
       - claude-code-bashhistory:/commandhistory
       - claude-code-config:/home/node/.claude
       - ./workspace:/workspace
-      - ./workspace/worktrees:/home/node/worktrees
     working_dir: /workspace
     environment:
       NODE_OPTIONS: --max-old-space-size=4096
       CLAUDE_CONFIG_DIR: /home/node/.claude
       POWERLEVEL9K_DISABLE_GITSTATUS: "true"
-    command: sleep infinity
+    command: /usr/local/bin/init-claude-mcp.sh
+    tty: true
     depends_on:
       - taskmaster
 

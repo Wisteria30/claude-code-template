@@ -1,5 +1,5 @@
 ```bash
-claude --dangerously-skip-permissions
+claude
 ```
 
 ```bash

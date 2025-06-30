@@ -39,3 +39,5 @@
         templatedir = ~/.git_template
 [pager]
         branch = false
+[worktree]
+	useRelativePaths = true

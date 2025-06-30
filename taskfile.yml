@@ -27,3 +27,8 @@ tasks:
     desc: "Dockerコンテナの状態を表示"
     cmds:
       - docker compose ps
+
+  build:
+    desc: "Dockerイメージをビルド"
+    cmds:
+      - docker compose build

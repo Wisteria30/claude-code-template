@@ -1,4 +1,4 @@
-FROM node:20
+FROM node:22
 
 # ---------- go install ----------
 ARG GO_VERSION=1.24.4
@@ -13,9 +13,25 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 ARG TZ
 ENV TZ="$TZ"
 
+# ---------- Git ≥ 2.48 で worktree.useRelativePaths を有効 ----------
+#   * sid(unstable) を追加して git* のみ優先度 990 で取得
+#   * Git 2.48 以上で worktree.useRelativePaths が正式サポート
+#     ref: git-config(2.48) docs  [oai_citation:0‡git-scm.com](https://git-scm.com/docs/git-config/2.48.0?utm_source=chatgpt.com)
+#   * sid に入っている git 2.50.0-1 をインストール（2025-06-30 時点）
+#     ref: Debian sid package list  [oai_citation:1‡packages.debian.org](https://packages.debian.org/sid/git?utm_source=chatgpt.com)
+RUN set -eux; \
+    echo 'deb http://deb.debian.org/debian sid main' > /etc/apt/sources.list.d/sid.list; \
+    printf 'Package: *\nPin: release a=sid\nPin-Priority: 100\n\n' \
+        >  /etc/apt/preferences.d/git-from-sid; \
+    printf 'Package: git*\nPin: release a=sid\nPin-Priority: 990\n' \
+        >> /etc/apt/preferences.d/git-from-sid; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends git; \
+    git --version;
+# ---------- Git section end ----------
+
 # Install basic development tools and iptables/ipset
 RUN apt update && apt install -y less \
-  git \
   procps \
   sudo \
   fzf \
@@ -117,18 +133,21 @@ RUN go install github.com/d-kuro/gwq/cmd/gwq@latest && \
   npm install -g ccusage
 
 # Copy and setup playwright config
-COPY setup/playwright-config.json /home/node/playwright-config.json
+COPY --chown=node:node setup/playwright-config.json /home/node/playwright-config.json
 
 # Install LSP
 RUN npm install -g typescript typescript-language-server
 
 # Copy and setup .zshrc
-COPY setup/.zshrc.local /home/node/.zshrc.local
+COPY --chown=node:node setup/.zshrc.local /home/node/.zshrc.local
 RUN cat /home/node/.zshrc.local >> /home/node/.zshrc
 
 # Copy and setup .gitconfig
-COPY setup/.gitconfig.local /home/node/.gitconfig.local
+COPY --chown=node:node setup/.gitconfig.local /home/node/.gitconfig.local
 RUN cat /home/node/.gitconfig.local >> /home/node/.gitconfig
+
+# Copy ccmanager config
+COPY --chown=node:node setup/ccmanager-config.json /home/node/.config/ccmanager/config.json
 
 # Copy and set up firewall script
 COPY setup/init-firewall.sh /usr/local/bin/

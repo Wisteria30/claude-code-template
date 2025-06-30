@@ -1,0 +1,31 @@
+{
+  "shortcuts": {
+    "returnToMenu": {
+      "ctrl": true,
+      "key": "e"
+    },
+    "cancel": {
+      "key": "escape"
+    }
+  },
+  "statusHooks": {},
+  "worktree": {
+    "autoDirectory": true,
+    "autoDirectoryPattern": ".git/worktree-dir/{branch}"
+  },
+  "command": {
+    "command": "claude",
+    "args": ["--dangerously-skip-permissions", "--model", "opus"]
+  },
+  "commandPresets": {
+    "presets": [
+      {
+        "id": "1",
+        "name": "Main",
+        "command": "claude",
+        "args": ["--dangerously-skip-permissions", "--model", "opus"]
+      }
+    ],
+    "defaultPresetId": "1"
+  }
+}
