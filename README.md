@@ -15,7 +15,7 @@ ccmanager supports and simplifies Claude Code’s officially recommended method 
 ## Requirement
 - docker compose
 - task
-- claude subscribe or bedrock
+- claude subscription or bedrock
 - git version 2.48>=
 
 ## Setup
