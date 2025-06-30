@@ -23,3 +23,11 @@ copy develop code to workspace directory.
 - [claude code](https://github.com/anthropics/claude-code)
 - [gwq](https://github.com/d-kuro/gwq)
 - [task master](https://github.com/eyaltoledano/claude-task-master)
+
+### MCP
+#### Playwright
+```
+claude
+/mcp
+GoogleのHOMEをスクショして
+```

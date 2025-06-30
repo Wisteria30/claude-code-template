@@ -43,6 +43,19 @@ RUN apt update && apt install -y less \
   libasound2 \
   libxshmfence1
 
+# 日本語フォントと必要な依存関係をインストール
+RUN apt install -y \
+    fonts-liberation \
+    fonts-noto-cjk \
+    fonts-ipafont-gothic \
+    fonts-ipafont-mincho \
+    locales \
+    && locale-gen ja_JP.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=ja_JP.UTF-8
+ENV LANGUAGE=ja_JP:ja
+
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
   chown -R node:node /usr/local/share
@@ -99,7 +112,15 @@ RUN npm install -g task-master-ai
 RUN go install github.com/d-kuro/gwq/cmd/gwq@latest && \
   go install github.com/go-task/task/v3/cmd/task@latest && \
   go install github.com/peco/peco/cmd/peco@latest && \
-  go install github.com/x-motemen/ghq@latest
+  go install github.com/x-motemen/ghq@latest && \
+  npm install -g ccmanager && \
+  npm install -g ccusage
+
+# Copy and setup playwright config
+COPY setup/playwright-config.json /home/node/playwright-config.json
+
+# Install LSP
+RUN npm install -g typescript typescript-language-server
 
 # Copy and setup .zshrc
 COPY setup/.zshrc.local /home/node/.zshrc.local
