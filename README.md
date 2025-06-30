@@ -1,5 +1,19 @@
 # Claude Code Template
 
+## Overview
+This environment is designed to run Claude Code inside a container using the --dangerously-skip-permissions option.
+
+If you configure a Git repository in the workspace directory on the host machine beforehand, you can run Claude Code with preconfigured parallel execution and MCP settings.
+
+The workspace directory is mounted as a volume inside the container, enabling changes to be tracked from the host machine.
+
+ccmanager supports and simplifies Claude Code’s officially recommended method for parallelisation using Git worktree. Furthermore, enabling Git's useRelativePaths setting and configuring the default worktree path under .git allows you to push changes from the host machine at any time.
+
+
+- MCP: playwright, lsmcp(+ [add script](./setup/init-claude-mcp.sh))
+- Parallelization: ccmanager
+- Cost tracking: ccusage
+
 ## Requirement
 - docker compose
 - task
@@ -11,7 +25,8 @@
 task up
 task exec
 # exec in container shell
-task run
+cd any-repository
+ccmanager # or claude
 
 # MCPs are automatically set up during container creation
 # To manually add additional MCPs, edit setup/init-claude-mcp.sh
