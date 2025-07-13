@@ -1,0 +1,509 @@
+name: Auto Issue Resolver
+
+on:
+  schedule:
+    # 20分ごとに実行（24時間365日）
+    - cron: '*/20 * * * *'
+  workflow_dispatch: # 手動実行も可能
+  issue_comment:
+    types: [created]
+  push:
+    branches:
+      - 'claude/issue-*'
+  issues:
+    types: [closed]
+
+# ステートラベルの定義
+env:
+  STATE_LABELS: |
+    claude:queued
+    claude:working
+    claude:needs-review
+    claude:done
+    claude:failed
+
+# 並行実行制御: cronジョブは独立したグループで管理
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'schedule' && 'cron' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'schedule' }}
+
+# デフォルト権限は最小限に
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  # Job 1: 定期実行または手動実行で新しいissueを処理
+  process-issue:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      issue_number: ${{ steps.find-issue.outputs.issue_number }}
+      process_status: ${{ steps.find-issue.outputs.process_status }}
+    
+    steps:
+      - name: Find and process highest priority issue
+        id: find-issue
+        uses: actions/github-script@v7
+        with:
+          # Personal Access Tokenを使用（設定されていない場合はGITHUB_TOKENを使用）
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            // ステートラベルをenvから取得
+            const stateLabelsArray = process.env.STATE_LABELS.trim().split('\n');
+            const stateLabels = {
+              queued: stateLabelsArray[0],
+              working: stateLabelsArray[1],
+              needsReview: stateLabelsArray[2],
+              done: stateLabelsArray[3],
+              failed: stateLabelsArray[4]
+            };
+            
+            // 優先度順にissueを探す
+            const priorities = ['high', 'middle', 'low'];
+            
+            try {
+              for (const priority of priorities) {
+                // 優先度ラベルがついたissueを取得（作成日時の降順）
+                const issues = await github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: priority,
+                  state: 'open',
+                  sort: 'created',
+                  direction: 'desc',
+                  per_page: 100
+                });
+                
+                // 未処理のissueを探す（claude:*ラベルがついていないもの）
+                const unprocessedIssue = issues.data.find(issue => 
+                  !issue.labels.some(label => label.name.startsWith('claude:'))
+                );
+                
+                if (unprocessedIssue) {
+                  console.log(`Found unprocessed issue #${unprocessedIssue.number} with priority: ${priority}`);
+                  
+                  // queuedラベルを追加
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: unprocessedIssue.number,
+                    labels: [stateLabels.queued]
+                  });
+                  
+                  // @claudeメンションコメントを投稿
+                  const comment = await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: unprocessedIssue.number,
+                    body: [
+                      `@claude このIssue #${unprocessedIssue.number} を解決してください。`,
+                      '',
+                      '以下の内容に基づいて、具体的な実装方針と必要なコード変更を提案してください：',
+                      '',
+                      `**タイトル**: ${unprocessedIssue.title}`,
+                      '',
+                      '**説明**:',
+                      unprocessedIssue.body || '説明なし',
+                      '',
+                      `優先度: ${priority}`,
+                      '',
+                      '---',
+                      '_このコメントは自動生成されました。Claudeが応答すると、修正案のPRが作成されます。_'
+                    ].join('\n')
+                  });
+                  
+                  // queuedラベルを削除してworkingラベルに変更
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: unprocessedIssue.number,
+                    name: stateLabels.queued
+                  }).catch(() => {});
+                  
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: unprocessedIssue.number,
+                    labels: [stateLabels.working]
+                  });
+                  
+                  console.log(`Claude mention posted on issue #${unprocessedIssue.number}`);
+                  core.setOutput('issue_number', unprocessedIssue.number.toString());
+                  core.setOutput('process_status', 'success');
+                  return; // 1つのissueのみ処理して終了
+                }
+              }
+              
+              console.log('No unprocessed issues found');
+              core.setOutput('issue_number', '');
+              core.setOutput('process_status', 'no_issues');
+              
+            } catch (error) {
+              console.error('Error processing issues:', error);
+              core.setOutput('process_status', 'error');
+              core.setOutput('error_message', error.message);
+              throw error; // fail-handlerジョブで処理
+            }
+
+  # Job 2: Claudeがコメントまたはブランチにプッシュした時にPRを作成
+  handle-claude-changes:
+    # 厳密な条件チェック
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/claude/issue-')) ||
+      (github.event_name == 'issue_comment' && 
+       github.event.action == 'created' &&
+       github.event.comment.user.login == 'claude[bot]' &&
+       contains(github.event.issue.labels.*.name, 'claude:working'))
+    
+    runs-on: ubuntu-latest
+    # このジョブは contents: write が必要
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      issue_number: ${{ steps.extract-issue.outputs.issue_number }}
+      pr_created: ${{ steps.create-pr.outputs.pr_exists == 'false' && steps.create-pr.outputs.pr_number != '' }}
+    
+    steps:
+      - name: Extract issue number
+        id: extract-issue
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # ブランチ名からIssue番号を抽出（claude/issue-123 -> 123）
+            ISSUE_NUM=$(echo "${{ github.ref_name }}" | sed 's/claude\/issue-//')
+            echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          else
+            echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
+      
+      - name: Check for changes
+        id: check-changes
+        run: |
+          # Claudeがブランチにプッシュした場合、変更があることを前提とする
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "branch_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            # コメントイベントの場合は、Claudeがブランチを作成したかチェック
+            BRANCH_NAME="claude/issue-${{ steps.extract-issue.outputs.issue_number }}"
+            if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+            else
+              echo "has_changes=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Run tests on Claude's changes
+        if: steps.check-changes.outputs.has_changes == 'true' && github.event_name == 'push'
+        id: run-tests
+        continue-on-error: true
+        run: |
+          # プロジェクトに応じたテストコマンドを実行
+          if [ -f "package.json" ]; then
+            npm ci
+            npm run build || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+            npm test || echo "TEST_FAILED=true" >> $GITHUB_ENV
+          elif [ -f "Makefile" ]; then
+            make test || echo "TEST_FAILED=true" >> $GITHUB_ENV
+          else
+            echo "No test runner found, skipping tests"
+          fi
+      
+      - name: Create Pull Request
+        if: steps.check-changes.outputs.has_changes == 'true'
+        id: create-pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ steps.extract-issue.outputs.issue_number }}');
+            const branchName = '${{ steps.check-changes.outputs.branch_name }}';
+            
+            // すでにPRが存在するかチェック
+            const existingPRs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branchName}`,
+              state: 'open'
+            });
+            
+            if (existingPRs.data.length > 0) {
+              console.log(`PR already exists: ${existingPRs.data[0].html_url}`);
+              core.setOutput('pr_exists', 'true');
+              core.setOutput('pr_url', existingPRs.data[0].html_url);
+              return;
+            }
+            
+            // Issue情報を取得
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            const testStatus = process.env.TEST_FAILED ? '❌ Tests failed' : 
+                            process.env.BUILD_FAILED ? '⚠️ Build failed' : 
+                            '✅ Tests passed';
+            
+            // PRを作成
+            const prBody = [
+              '## 🤖 Automated fix by Claude',
+              '',
+              `Fixes #${issueNumber}`,
+              '',
+              '### Summary',
+              `This PR contains automated fixes implemented by Claude Code for the issue "${issue.data.title}".`,
+              '',
+              '### Test Status',
+              testStatus,
+              '',
+              '### Changes',
+              'Please review the changes carefully before merging.',
+              '',
+              '---',
+              `_This PR was automatically generated after Claude Code processed issue #${issueNumber}_`
+            ].join('\n');
+            
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🤖 Claude fix: ${issue.data.title}`,
+              head: branchName,
+              base: 'main',
+              body: prBody,
+              draft: true
+            });
+            
+            core.setOutput('pr_number', pr.data.number);
+            core.setOutput('pr_url', pr.data.html_url);
+            core.setOutput('pr_exists', 'false');
+            
+            // 元のissueにPRリンクをコメント
+            const commentBody = [
+              `🎉 Claude has implemented a fix and created a draft PR: ${pr.data.html_url}`,
+              '',
+              'Please review the changes and merge if they look good.'
+            ].join('\n');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: commentBody
+            });
+      
+      - name: Update issue labels
+        if: always() && steps.extract-issue.outputs.issue_number
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ steps.extract-issue.outputs.issue_number }}');
+            const stateLabelsArray = process.env.STATE_LABELS.trim().split('\n');
+            const stateLabels = {
+              queued: stateLabelsArray[0],
+              working: stateLabelsArray[1],
+              needsReview: stateLabelsArray[2],
+              done: stateLabelsArray[3],
+              failed: stateLabelsArray[4]
+            };
+            
+            try {
+              const hasChanges = '${{ steps.check-changes.outputs.has_changes }}' === 'true';
+              const prExists = '${{ steps.create-pr.outputs.pr_exists }}' === 'true';
+              const prNumber = '${{ steps.create-pr.outputs.pr_number }}';
+              const jobStatus = '${{ job.status }}';
+              
+              // 変更がない場合はworkingを維持
+              if (!hasChanges) {
+                console.log('No changes detected, keeping claude:working label');
+                return;
+              }
+              
+              // workingラベルを削除
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                name: stateLabels.working
+              }).catch(() => {});
+              
+              // 結果に応じて適切なラベルを追加
+              if (prExists || prNumber) {
+                // PR作成成功または既存PR → needs-review
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  labels: [stateLabels.needsReview]
+                });
+                console.log('Added claude:needs-review label');
+              } else if (jobStatus === 'failure' || (!prExists && !prNumber && hasChanges)) {
+                // PR作成失敗 → failed
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  labels: [stateLabels.failed]
+                });
+                console.log('Added claude:failed label due to PR creation failure');
+                
+                // エラーメッセージを投稿
+                const errorBody = `❌ PR作成に失敗しました。[ワークフローログ](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})を確認してください。`;
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: errorBody
+                });
+              }
+            } catch (error) {
+              console.error('Error updating labels:', error);
+            }
+
+  # Job 3: Issueがクローズされた時にdoneラベルを追加
+  add-done-label:
+    if: github.event_name == 'issues' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Add claude:done label
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = context.issue.number;
+            const stateLabelsArray = process.env.STATE_LABELS.trim().split('\n');
+            const stateLabels = {
+              queued: stateLabelsArray[0],
+              working: stateLabelsArray[1],
+              needsReview: stateLabelsArray[2],
+              done: stateLabelsArray[3],
+              failed: stateLabelsArray[4]
+            };
+            
+            try {
+              // Get current issue labels
+              const issue = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+              
+              // Check if any claude:* label exists
+              const hasClaudeLabel = issue.data.labels.some(label => 
+                label.name.startsWith('claude:')
+              );
+              
+              // Only add claude:done if the issue had some claude label
+              if (hasClaudeLabel) {
+                console.log(`Issue #${issueNumber} was closed and has Claude labels`);
+                
+                // Remove any existing claude state labels
+                for (const labelName of Object.values(stateLabels)) {
+                  if (labelName !== stateLabels.done) {
+                    await github.rest.issues.removeLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issueNumber,
+                      name: labelName
+                    }).catch(() => {
+                      // Ignore if label doesn't exist
+                    });
+                  }
+                }
+                
+                // Add claude:done label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  labels: [stateLabels.done]
+                });
+                
+                console.log(`Added ${stateLabels.done} label to closed issue #${issueNumber}`);
+              } else {
+                console.log(`Issue #${issueNumber} was closed but has no Claude labels, skipping`);
+              }
+              
+            } catch (error) {
+              console.error('Error handling issue close:', error);
+              core.setFailed(error.message);
+            }
+
+  # Job 4: エラーハンドリング - 他のジョブが失敗した場合にfailedラベルを追加
+  fail-handler:
+    if: failure()
+    runs-on: ubuntu-latest
+    needs: [process-issue, handle-claude-changes]
+    
+    steps:
+      - name: Mark issue as failed
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const stateLabelsArray = process.env.STATE_LABELS.trim().split('\n');
+            const stateLabels = {
+              queued: stateLabelsArray[0],
+              working: stateLabelsArray[1],
+              needsReview: stateLabelsArray[2],
+              done: stateLabelsArray[3],
+              failed: stateLabelsArray[4]
+            };
+            
+            // process-issueジョブからissue番号を取得
+            const issueNumber = '${{ needs.process-issue.outputs.issue_number }}' || 
+                              '${{ needs.handle-claude-changes.outputs.issue_number }}';
+            
+            if (issueNumber && issueNumber !== '') {
+              try {
+                // 全てのClaude状態ラベルを削除
+                for (const labelName of Object.values(stateLabels)) {
+                  if (labelName !== stateLabels.failed) {
+                    await github.rest.issues.removeLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: parseInt(issueNumber),
+                      name: labelName
+                    }).catch(() => {});
+                  }
+                }
+                
+                // failedラベルを追加
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNumber),
+                  labels: [stateLabels.failed]
+                });
+                
+                // エラーメッセージをコメント
+                const errorBody = [
+                  '❌ ワークフローの実行中にエラーが発生しました。',
+                  '',
+                  `詳細は[ワークフローログ](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})を確認してください。`,
+                  '',
+                  '問題が解決したら、再度実行してください。'
+                ].join('\n');
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNumber),
+                  body: errorBody
+                });
+                
+              } catch (error) {
+                console.error('Error in fail handler:', error);
+              }
+            }

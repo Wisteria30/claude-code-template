@@ -1,0 +1,57 @@
+name: 🔴 自動修正（高優先度）
+description: Claudeによる緊急の自動修正
+labels: ["high"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🔴 高優先度 自動修正リクエスト
+
+  - type: textarea
+    id: request
+    attributes:
+      label: 📝 修正・実装してほしいこと
+      description: 何をしてほしいか
+      placeholder: |
+        例: TypeScriptのエラーを修正して
+        例: READMEを最新の内容に更新して
+        例: テストを追加して
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: type
+    attributes:
+      label: 🔧 作業タイプ（該当するものを選択）
+      options:
+        - label: 🐛 バグ修正
+        - label: ✨ 新機能追加
+        - label: 📝 ドキュメント更新
+        - label: 🧪 テスト追加・修正
+        - label: ♻️ リファクタリング
+        - label: ⚡ パフォーマンス改善
+
+  - type: textarea
+    id: details
+    attributes:
+      label: 💡 詳細説明（任意）
+      description: 背景や詳細があれば記入
+      placeholder: |
+        なぜこの修正が必要か、期待する動作など
+
+  - type: textarea
+    id: success
+    attributes:
+      label: ✅ 成功条件（任意）
+      description: どうなれば成功か
+      placeholder: |
+        - ビルドが通る
+        - テストがパスする
+        - エラーが出なくなる
+
+  - type: input
+    id: files
+    attributes:
+      label: 📁 関連ファイル（任意）
+      description: 対象ファイルのパス
+      placeholder: src/index.ts, config.yaml

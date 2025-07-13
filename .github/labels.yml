@@ -1,0 +1,37 @@
+# GitHub Labels Configuration
+# This file defines the labels used in this repository
+# Sync with: gh workflow run sync-labels.yml
+
+# Priority Labels
+- name: high
+  color: "d73a4a"
+  description: "高優先度"
+
+- name: middle
+  color: "fbca04"
+  description: "中優先度"
+
+- name: low
+  color: "0e8a16"
+  description: "低優先度"
+
+# Claude State Machine Labels
+- name: "claude:queued"
+  color: "e99695"
+  description: "Claudeによる処理待ち"
+
+- name: "claude:working"
+  color: "5319e7"
+  description: "Claudeが処理中"
+
+- name: "claude:needs-review"
+  color: "0052cc"
+  description: "レビュー待ち"
+
+- name: "claude:done"
+  color: "0e8a16"
+  description: "完了"
+
+- name: "claude:failed"
+  color: "b60205"
+  description: "処理失敗"
