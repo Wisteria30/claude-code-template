@@ -12,12 +12,15 @@ services:
     volumes:
       - claude-code-bashhistory:/commandhistory
       - claude-code-config:/home/node/.claude
+      - ./setup/CLAUDE.md:/home/node/.claude/CLAUDE.md
       - ./workspace:/workspace
     working_dir: /workspace
     environment:
       NODE_OPTIONS: --max-old-space-size=4096
       CLAUDE_CONFIG_DIR: /home/node/.claude
       POWERLEVEL9K_DISABLE_GITSTATUS: "true"
+    env_file:
+      - .env
     command: /usr/local/bin/init-claude-mcp.sh
     tty: true
     depends_on:
