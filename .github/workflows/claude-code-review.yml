@@ -42,6 +42,7 @@ jobs:
           
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
+            <language>Japanese</language>
             Please review this pull request and provide feedback on:
             - Code quality and best practices
             - Potential bugs or issues
@@ -50,6 +51,8 @@ jobs:
             - Test coverage
             
             Be constructive and helpful in your feedback.
+            **Write the User Response in Japanese.**
+            
 
           # Optional: Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
           # use_sticky_comment: true
