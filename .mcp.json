@@ -2,7 +2,7 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--config", "${{ github.workspace }}/setup/playwright-config.json"]
+      "args": ["-y", "@playwright/mcp@latest", "--config", "./setup/playwright-config.json"]
     },
     "typescript": {
       "command": "npx",
