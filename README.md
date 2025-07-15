@@ -18,6 +18,12 @@ ccmanager supports and simplifies Claude Code’s officially recommended method 
 - claude subscription or bedrock
 - git version 2.48>=
 
+## GitHub Actions Configuration
+When using this template with GitHub Actions (via `.github/workflows/claude.yml`), you need to configure the following repository secrets:
+
+- `CLAUDE_CODE_OAUTH_TOKEN`: Your Claude Code OAuth token for authentication
+- `OPENAI_API_KEY`: OpenAI API key required for the o3 search MCP server
+
 ## Setup
 ```bash
 task up
