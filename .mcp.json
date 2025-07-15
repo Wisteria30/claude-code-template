@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--config", "${{ github.workspace }}/setup/playwright-config.json"]
+    },
+    "typescript": {
+      "command": "npx",
+      "args": ["-y", "@mizchi/lsmcp", "--language=typescript"]
+    },
+    "o3": {
+      "command": "npx",
+      "args": ["o3-search-mcp"],
+      "env": {
+        "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
+        "SEARCH_CONTEXT_SIZE": "medium",
+        "REASONING_EFFORT": "medium",
+        "OPENAI_API_TIMEOUT": "600000"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}

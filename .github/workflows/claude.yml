@@ -50,7 +50,10 @@ jobs:
           assignee_trigger: "claude-bot"
           
           # Optional: Allow Claude to run specific commands
-          allowed_tools: "Bash,Read,Write,Edit,MultiEdit,LS,Glob,Grep,Task,WebFetch,TodoRead,TodoWrite,NotebookRead,NotebookEdit"
+          allowed_tools: |
+            Bash,Read,Write,Edit,MultiEdit,LS,Glob,Grep,Task,WebFetch,TodoRead,TodoWrite,NotebookRead,NotebookEdit,
+            mcp__playwright__*,mcp__typescript__*,mcp__o3__o3-search,mcp__context7__resolve-library-id,mcp__context7__get-library-docs
+          mcp_config: ./.mcp.json
           # Optional: Add custom instructions for Claude to customize its behavior for your project
           
           # Optional: Custom environment variables for Claude
