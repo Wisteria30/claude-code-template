@@ -1,7 +1,7 @@
 FROM node:22
 
 # ---------- go install ----------
-ARG GO_VERSION=1.24.4
+ARG GO_VERSION=1.24.5
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz" -o /tmp/go.tgz; \
