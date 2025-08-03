@@ -105,6 +105,10 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV GOPATH=/home/node/go
 ENV PATH=$PATH:/usr/local/share/npm-global/bin:$GOPATH/bin
+ENV PATH=$PATH:/home/node/.local/bin
+
+# Install uvx
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Set the default shell to zsh rather than sh
 ENV SHELL=/bin/zsh

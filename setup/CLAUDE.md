@@ -130,7 +130,23 @@ Please use it often.
 LSP 機能が欲しいときに呼び出します。
 
 ## Context7 MCP
-「最新の情報を元に実装してください。」などユーザーから実装と指示があった場合に、現在のライブラリを確認してContext7の結果を得てからのみ実装してください。
+ユーザーから実装の指示があった場合に、まず、現在のライブラリを確認してContext7の結果を得てからのみ実装してください。
+特に「最新の情報を元に実装してください。」と指示があった場合は必ず参照してください。
+
+## Serena MCP
+Serena は「読む・直す・試す・残す」を IDE なしで完結させるための MCP です。
+以下のタイミングと目的で必ず呼び出してください。
+
+- **セッション開始・/clear 後**  
+  - `serena__initial_instructions` でプロジェクトをインデックス & ツール一覧ロード  
+- **コードを読むとき**  
+  - `serena:get_code` / `serena:search_symbols` で対象ファイル・シンボルを取得  
+- **実装を変えたいとき**  
+  - 差分を提案 → `serena:apply_patch` で安全に変更  
+- **動作を確かめたいとき**  
+  - `serena:run_tests` や `serena:execute_shell_command` でテスト・静的解析  
+- **変更を確定したいとき**  
+  - `serena:commit_changes` で意図付きコミットを作成  
 
 # Project Logging
 * Use vibelogger library for all logging needs

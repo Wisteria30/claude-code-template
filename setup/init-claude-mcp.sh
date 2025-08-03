@@ -24,6 +24,20 @@ claude mcp add -s user o3 \
 echo "Adding Context 7 MCP..."
 claude mcp add -s user context7 npx -- -y @upstash/context7-mcp
 
+# echo serena mcp
+echo "Adding serena MCP..."
+claude mcp add -s user serena -- uvx --from git+https://github.com/oraios/serena serena-mcp-server --context ide-assistant --project $(pwd) --enable-web-dashboard false
+
+# n8n MCP
+echo "Adding n8n MCP..."
+claude mcp add -s user n8n-mcp \
+  -e MCP_MODE=stdio \
+  -e LOG_LEVEL=error \
+  -e DISABLE_CONSOLE_OUTPUT=true \
+  -e N8N_API_URL=$N8N_API_URL \
+  -e N8N_API_KEY=$N8N_API_KEY \
+  -- npx -y n8n-mcp
+
 # Task Master MCP (既にREADMEに記載されているもの)
 # echo "Adding Task Master MCP..."
 # claude mcp add -s user --transport sse taskmaster-http http://taskmaster:4891/sse

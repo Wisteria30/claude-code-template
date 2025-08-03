@@ -30,9 +30,6 @@
         main = F ?!git commit --fixup %(commit)
         main = S ?!git commit --squash %(commit)
 
-[url "ssh://git@github.com/"]
-        insteadOf = https://github.com/
-
 [ghq]
         root = /workspace
 [init]
