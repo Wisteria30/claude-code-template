@@ -98,7 +98,7 @@ Follow this process precisely, always prioritizing clean, well-tested code over 
 
 Always write one test at a time, make it run, then improve structure. Always run all the tests (except long-running tests) each time.
 
-# MCP Serevr
+# MCP Server
 Using MCP Server well can help users.
 Please use it often.
 
