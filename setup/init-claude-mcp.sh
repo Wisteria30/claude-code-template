@@ -36,7 +36,7 @@ claude mcp add -s user n8n-mcp \
   -e DISABLE_CONSOLE_OUTPUT=true \
   -e N8N_API_URL=$N8N_API_URL \
   -e N8N_API_KEY=$N8N_API_KEY \
-  -- npx -y n8n-mcp
+  -- n8n-mcp
 
 # Task Master MCP (既にREADMEに記載されているもの)
 # echo "Adding Task Master MCP..."

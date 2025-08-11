@@ -126,7 +126,7 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 RUN npm install -g @anthropic-ai/claude-code
 
 # Install MCP server
-RUN npm install -g task-master-ai
+RUN npm install -g task-master-ai n8n-mcp
 
 # Install tools
 RUN go install github.com/d-kuro/gwq/cmd/gwq@latest && \
